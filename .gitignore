@@ -1,0 +1,30 @@
+# Secrets and local configuration
+.env
+.env.*
+*.secret
+*.key
+*.pem
+
+# Runtime files
+*.log
+*.pid
+*.err.log
+*.out.log
+
+# Tunnel and local tooling
+cloudflared.log
+ngrok.log
+ngrok.pid
+
+# Binaries and downloads
+bin/
+*.zip
+*.exe
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
