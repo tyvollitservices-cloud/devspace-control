@@ -48,6 +48,22 @@ The launcher writes DevSpace configuration to:
 
 Do not commit the `.devspace` folder or copied Owner passwords.
 
+## First-time launcher setup
+
+1. Double-click `Start-DevSpace-Launcher.bat`.
+2. Confirm the Allowed root is the folder that contains the projects ChatGPT
+   should be allowed to access.
+3. Keep Local port as `7676` unless another process already uses it.
+4. For local-only testing, leave Public base URL as `http://127.0.0.1:7676`.
+5. For ChatGPT, enter your own stable public base URL, without `/mcp`.
+6. Click `Save setup`.
+7. Click `Start tunnel` if you are using ngrok or Cloudflare.
+8. Click `Start` to start DevSpace.
+
+`Save setup` writes `%USERPROFILE%\.devspace\config.json` and creates the
+Owner password in `%USERPROFILE%\.devspace\auth.json` if needed. Use `Open
+config folder` in the launcher to inspect those files locally.
+
 ## Requirements
 
 - Windows
@@ -102,6 +118,10 @@ bin/ngrok.exe
 
 The launcher prefers `bin/ngrok.exe` when it exists.
 
+If `ngrok version` shows an old agent, update your system ngrok or use the
+local `bin/ngrok.exe` override. Some ngrok accounts reject old agents even when
+the authtoken is valid.
+
 If the public base URL is local or empty, the launcher can use a temporary Cloudflare quick tunnel instead. Cloudflare quick tunnel URLs change whenever a new tunnel is created.
 
 Normal browser visits to free ngrok domains may show a warning page. ChatGPT MCP requests use a non-browser user agent and should reach DevSpace directly. If the OAuth approval browser shows the ngrok warning, click through once to continue.
@@ -109,6 +129,14 @@ Normal browser visits to free ngrok domains may show a warning page. ChatGPT MCP
 ## ChatGPT app setup
 
 In ChatGPT, create a custom app/connector that points to DevSpace.
+
+The exact menu names can change, but the flow is usually:
+
+```text
+ChatGPT Settings -> Apps / Apps & Connectors -> Create / New App
+```
+
+If ChatGPT has a developer-mode toggle for custom apps, enable it first.
 
 Use these fields:
 
@@ -267,6 +295,15 @@ ngrok config add-authtoken <token>
 
 Also confirm that the configured static domain belongs to your ngrok account.
 
+Common ngrok errors:
+
+- `ERR_NGROK_4018`: ngrok is not authenticated. Run `ngrok config
+  add-authtoken <token>`.
+- `ERR_NGROK_121`: the ngrok agent is too old for your account. Install the
+  current v3 agent or put it at `bin/ngrok.exe`.
+- `ERR_NGROK_8012`: ngrok reached the tunnel, but DevSpace was not listening on
+  the local port. Start DevSpace, then retry.
+
 ### Cloudflare tunnel URL is not detected
 
 Open `cloudflared.log`, copy the `https://...trycloudflare.com` URL, and paste it into the Public base URL field if needed.
@@ -299,3 +336,18 @@ Make sure only safe project files are staged. Do not push:
 - zip files and installer downloads
 
 The `.gitignore` is set up to exclude common sensitive and generated files, but still review changes before every push.
+
+For an extra check, search for real local values before committing:
+
+```powershell
+rg -n "ngrok-free\.dev|trycloudflare\.com|C:\\Users\\|authtoken|Owner password|client_secret" .
+```
+
+Template examples such as `your-static-ngrok-domain.ngrok-free.dev` are fine.
+Real tunnel domains, local usernames, tokens, and passwords should not be in the
+public repo.
+
+If a secret or private URL was already pushed, remove it from the files, rotate
+the exposed token or password, then rewrite the public git history before
+pushing again. Force-pushing cleans your branch, but it cannot remove copies
+that other people may already have pulled or cached.
