@@ -57,31 +57,120 @@ Do not commit the `.devspace` folder or copied Owner passwords.
 - Optional: ngrok for a stable public URL
 - Optional: cloudflared for a temporary Cloudflare quick tunnel
 
-## ChatGPT / MCP setup
+## ngrok setup
 
-For ChatGPT, use the `Start tunnel` button first.
+Use ngrok when you want one stable public URL for ChatGPT instead of a new
+temporary Cloudflare URL every time.
 
-If the public base URL is set to a stable ngrok hostname:
+1. Create or sign in to an ngrok account:
+
+```text
+https://dashboard.ngrok.com
+```
+
+2. Add your ngrok authtoken on this machine:
+
+```powershell
+ngrok config add-authtoken <your-ngrok-token>
+```
+
+3. In the ngrok dashboard, find or create a static dev domain. Free ngrok
+accounts usually provide a domain like:
 
 ```text
 https://your-static-ngrok-domain.ngrok-free.dev
 ```
 
-then the launcher starts ngrok with:
+4. Put that origin, without `/mcp`, into the launcher Public base URL field:
+
+```text
+https://your-static-ngrok-domain.ngrok-free.dev
+```
+
+When the public base URL is an ngrok hostname, the launcher starts:
 
 ```text
 ngrok http --domain=your-static-ngrok-domain.ngrok-free.dev 7676
 ```
 
-This requires:
+If your installed `ngrok.exe` is too old, download the latest ngrok v3 Windows
+binary and place it at:
 
-- ngrok installed and authenticated with `ngrok config add-authtoken <token>`
-- the static ngrok dev domain available in your ngrok account
-- `bin/ngrok.exe` available locally, if your system ngrok version is too old
+```text
+bin/ngrok.exe
+```
+
+The launcher prefers `bin/ngrok.exe` when it exists.
 
 If the public base URL is local or empty, the launcher can use a temporary Cloudflare quick tunnel instead. Cloudflare quick tunnel URLs change whenever a new tunnel is created.
 
 Normal browser visits to free ngrok domains may show a warning page. ChatGPT MCP requests use a non-browser user agent and should reach DevSpace directly. If the OAuth approval browser shows the ngrok warning, click through once to continue.
+
+## ChatGPT app setup
+
+In ChatGPT, create a custom app/connector that points to DevSpace.
+
+Use these fields:
+
+```text
+Name:
+DevSpace
+
+Description:
+Local coding workspace on my machine
+
+Connection:
+Server URL
+
+Server URL:
+https://your-static-ngrok-domain.ngrok-free.dev/mcp
+
+Authentication:
+OAuth
+```
+
+Check the warning box:
+
+```text
+I understand and want to continue
+```
+
+You usually do not need Advanced OAuth settings. DevSpace publishes OAuth
+discovery metadata and ChatGPT should detect it automatically.
+
+If ChatGPT asks for manual OAuth values, use the same public base URL:
+
+```text
+Auth URL:
+https://your-static-ngrok-domain.ngrok-free.dev/authorize
+
+Token URL:
+https://your-static-ngrok-domain.ngrok-free.dev/token
+
+Registration URL:
+https://your-static-ngrok-domain.ngrok-free.dev/register
+
+Authorization server base:
+https://your-static-ngrok-domain.ngrok-free.dev/
+
+Resource:
+https://your-static-ngrok-domain.ngrok-free.dev/mcp
+
+Default scopes:
+devspace
+
+Base scopes:
+devspace
+
+Token endpoint auth method:
+none
+
+OIDC:
+off
+```
+
+Leave OAuth Client ID and OAuth Client Secret blank unless ChatGPT explicitly
+requires a user-defined client.
 
 ## Recommended start order
 
@@ -93,6 +182,41 @@ Normal browser visits to free ngrok domains may show a warning page. ChatGPT MCP
 6. Use the Owner password when asked to approve access.
 
 If you start DevSpace before the tunnel, the launcher restarts DevSpace after detecting the tunnel URL. DevSpace must be restarted whenever the public tunnel hostname changes, because its Host allowlist is built at startup.
+
+## Test from ChatGPT
+
+After the app is connected, ask ChatGPT to use DevSpace:
+
+```text
+Use DevSpace to open C:\path\to\your-project and run git status.
+```
+
+Expected behavior:
+
+1. ChatGPT calls the DevSpace app.
+2. DevSpace may open an OAuth approval page.
+3. Paste the Owner password from the launcher.
+4. ChatGPT can then open the workspace and run project commands.
+
+Opening the MCP URL directly in a browser is not a valid connection test. This
+response is expected:
+
+```json
+{"error":"invalid_token","error_description":"Missing Authorization header"}
+```
+
+It means DevSpace is reachable but protected by OAuth. To test reachability
+without OAuth, open:
+
+```text
+https://your-static-ngrok-domain.ngrok-free.dev/healthz
+```
+
+Expected response:
+
+```json
+{"ok":true,"name":"devspace"}
+```
 
 ## Local-only usage
 
