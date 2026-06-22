@@ -218,6 +218,29 @@ Expected response:
 {"ok":true,"name":"devspace"}
 ```
 
+You may also see this when manually opening OAuth or token URLs outside
+ChatGPT:
+
+```json
+{"error":"invalid_client","error_description":"Client secret is required"}
+```
+
+That does not mean the ChatGPT app is broken. It means the request you made
+manually did not match the OAuth client authentication method expected for that
+endpoint. OAuth has several moving parts:
+
+- ChatGPT discovers DevSpace OAuth metadata from the `.well-known` endpoints.
+- ChatGPT registers or configures an OAuth client.
+- ChatGPT sends the correct authorization request, PKCE challenge, redirect URI,
+  resource value, scope, and token request.
+- DevSpace validates that flow and returns a bearer token.
+- ChatGPT uses that bearer token in the `Authorization` header when calling
+  `/mcp`.
+
+A browser address-bar request skips those protocol steps, so DevSpace can
+correctly reject it with `invalid_token` or `invalid_client`. The real test is
+to ask ChatGPT to use the DevSpace app and confirm DevSpace tool calls run.
+
 ## Local-only usage
 
 For local MCP clients, you can use:
