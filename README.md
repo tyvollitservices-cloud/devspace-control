@@ -7,7 +7,9 @@ DevSpace Control is a small Windows launcher for running `@waishnav/devspace` lo
 > It is not affiliated with or maintained by the authors of `@waishnav/devspace`.
 > Users must install and use `@waishnav/devspace` separately.
 
-Double-click `Start-DevSpace-Launcher.bat` to open the DevSpace control UI.
+Double-click `Start-DevSpace-Launcher.vbs` to open the DevSpace control UI
+without a console window. `Start-DevSpace-Launcher.bat` is kept as a fallback
+launcher for troubleshooting.
 
 ## What the launcher does
 
@@ -24,6 +26,7 @@ Double-click `Start-DevSpace-Launcher.bat` to open the DevSpace control UI.
 ## Files in this repo
 
 - `Start-DevSpace-Launcher.bat` - double-click launcher for Windows
+- `Start-DevSpace-Launcher.vbs` - no-console Windows launcher
 - `DevSpace-Launcher.ps1` - main PowerShell UI and process manager
 - `Install-DevSpace-Requirements.ps1` - installer for Node.js, DevSpace, ngrok, and cloudflared
 - `README.md` - project documentation
