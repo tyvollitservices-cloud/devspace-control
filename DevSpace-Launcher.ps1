@@ -42,7 +42,8 @@ function Save-DevSpaceConfig {
   param(
     [string] $AllowedRoot,
     [int] $Port,
-    [string] $PublicBaseUrl
+    [string] $PublicBaseUrl,
+    [string] $OwnerToken = ""
   )
 
   New-Item -ItemType Directory -Force -Path $script:ConfigDir | Out-Null
@@ -55,12 +56,33 @@ function Save-DevSpaceConfig {
   }
   [IO.File]::WriteAllText($script:ConfigPath, (($config | ConvertTo-Json -Depth 8) + "`n"), [Text.UTF8Encoding]::new($false))
 
+  $ownerTokenToSave = $OwnerToken.Trim()
+  if ($ownerTokenToSave -and $ownerTokenToSave.Length -lt 16) {
+    throw "Owner password must be at least 16 characters."
+  }
+
   $auth = Read-JsonFile $script:AuthPath ([pscustomobject]@{})
-  if (-not $auth.ownerToken -or $auth.ownerToken.Length -lt 16) {
+  if (-not $ownerTokenToSave) {
+    $ownerTokenToSave = if ($auth.ownerToken -and $auth.ownerToken.Length -ge 16) { [string]$auth.ownerToken } else { New-OwnerToken }
+  }
+
+  if ($auth.ownerToken -ne $ownerTokenToSave) {
     $auth = [ordered]@{
-      ownerToken = New-OwnerToken
+      ownerToken = $ownerTokenToSave
     }
-    [IO.File]::WriteAllText($script:AuthPath, (($auth | ConvertTo-Json -Depth 8) + "`n"), [Text.UTF8Encoding]::new($false))
+  } else {
+    $auth.ownerToken = $ownerTokenToSave
+  }
+  [IO.File]::WriteAllText($script:AuthPath, (($auth | ConvertTo-Json -Depth 8) + "`n"), [Text.UTF8Encoding]::new($false))
+}
+
+function Save-CurrentSetup {
+  try {
+    Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim() -OwnerToken $passwordBox.Text.Trim()
+    return $true
+  } catch {
+    [Windows.Forms.MessageBox]::Show($_.Exception.Message, "DevSpace Launcher")
+    return $false
   }
 }
 
@@ -327,16 +349,19 @@ DEVSPACE CONTROL SETUP
 
 1. Set Allowed project root to the folder ChatGPT may access.
 2. Keep Local port as 7676 unless that port is already used.
-3. Put the ChatGPT public fallback/origin URL in Public base URL:
+3. Set Owner password if you want a custom approval password.
+   Leave it blank to auto-generate one, or click Generate.
+
+4. Put the ChatGPT public fallback/origin URL in Public base URL:
 
    Example: https://your-domain.ngrok-free.dev
 
    Use the base URL only. Do not add /mcp here.
 
-4. Click Save setup.
-5. Click Start tunnel.
-6. Click Start.
-7. Click Copy MCP URL.
+5. Click Save setup.
+6. Click Start tunnel.
+7. Click Start.
+8. Click Copy MCP URL.
 
 CHATGPT SETUP
 
@@ -396,7 +421,9 @@ function Refresh-Ui {
   }
 
   $owner = Get-OwnerPassword
-  $passwordBox.Text = if ($owner) { $owner } else { "" }
+  if (-not $passwordBox.Focused) {
+    $passwordBox.Text = if ($owner) { $owner } else { "" }
+  }
 }
 
 function Find-TunnelUrl {
@@ -420,7 +447,9 @@ function Find-TunnelUrl {
 }
 
 function Start-DevSpace {
-  Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim()
+  if (-not (Save-CurrentSetup)) {
+    return
+  }
 
   if (Test-DevSpaceRunning) {
     Append-Status "DevSpace is already running."
@@ -561,7 +590,9 @@ function Start-Tunnel {
   $url = Find-TunnelUrl
   if ($url) {
     $publicUrlBox.Text = $url
-    Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim()
+    if (-not (Save-CurrentSetup)) {
+      return
+    }
     Append-Status "Tunnel URL detected: $url"
     Append-Status "MCP URL: $url/mcp"
     if (Test-DevSpaceRunning) {
@@ -591,7 +622,9 @@ function Start-NgrokTunnel {
   }
 
   $domain = ([Uri]$PublicBaseUrl).Host
-  Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $PublicBaseUrl
+  if (-not (Save-CurrentSetup)) {
+    return
+  }
   Set-Content -Path $script:NgrokLogFile -Value "--- ngrok tunnel start $(Get-Date -Format s) ---"
 
   $process = New-Object Diagnostics.Process
@@ -651,7 +684,9 @@ function Stop-Tunnel {
 }
 
 function Run-Doctor {
-  Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim()
+  if (-not (Save-CurrentSetup)) {
+    return
+  }
   Append-Status "Running devspace doctor..."
 
   $output = & npx.cmd --yes @waishnav/devspace doctor 2>&1
@@ -767,19 +802,30 @@ $form.Controls.Add($passwordLabel)
 
 $passwordBox = New-Object Windows.Forms.TextBox
 $passwordBox.Location = New-Object Drawing.Point(210, 228)
-$passwordBox.Size = New-Object Drawing.Size(500, 28)
-$passwordBox.ReadOnly = $true
+$passwordBox.Size = New-Object Drawing.Size(370, 28)
+$passwordBox.ReadOnly = $false
 $passwordBox.Text = if ($existingAuth.ownerToken) { $existingAuth.ownerToken } else { "" }
 $form.Controls.Add($passwordBox)
+
+$generatePasswordButton = New-Object Windows.Forms.Button
+$generatePasswordButton.Text = "Generate"
+$generatePasswordButton.Location = New-Object Drawing.Point(592, 228)
+$generatePasswordButton.Size = New-Object Drawing.Size(120, 28)
+$generatePasswordButton.Add_Click({
+  $passwordBox.Text = New-OwnerToken
+  Append-Status "Generated new Owner password. Click Save setup to apply it."
+})
+$form.Controls.Add($generatePasswordButton)
 
 $saveButton = New-Object Windows.Forms.Button
 $saveButton.Text = "Save setup"
 $saveButton.Location = New-Object Drawing.Point(22, 280)
 $saveButton.Size = New-Object Drawing.Size(110, 34)
 $saveButton.Add_Click({
-  Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim()
-  Append-Status "Saved DevSpace config."
-  Refresh-Ui
+  if (Save-CurrentSetup) {
+    Append-Status "Saved DevSpace config and Owner password."
+    Refresh-Ui
+  }
 })
 $form.Controls.Add($saveButton)
 
