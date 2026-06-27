@@ -26,6 +26,34 @@ function Install-WingetPackage {
   & $winget.Source install --id $Id --exact --accept-package-agreements --accept-source-agreements
 }
 
+function Test-CommandAvailable {
+  param([string] $Command)
+  return $null -ne (Get-Command $Command -ErrorAction SilentlyContinue)
+}
+
+function Write-InstallStatus {
+  param(
+    [string] $Name,
+    [bool] $Installed,
+    [string] $Fix
+  )
+
+  if ($Installed) {
+    Write-Host "[OK]      $Name" -ForegroundColor Green
+  } else {
+    Write-Host "[MISSING] $Name - $Fix" -ForegroundColor Yellow
+  }
+}
+
+function Test-DevSpaceAvailable {
+  if (-not (Test-CommandAvailable "npx.cmd")) {
+    return $false
+  }
+
+  $output = npx.cmd --yes @waishnav/devspace --help 2>&1 | Select-Object -First 1
+  return $LASTEXITCODE -eq 0 -and $null -ne $output
+}
+
 Write-Host "DevSpace Control requirements installer" -ForegroundColor Green
 Write-Host "This installs Node.js, @waishnav/devspace, ngrok, and cloudflared when missing."
 
@@ -72,6 +100,15 @@ if (Get-Command "npx.cmd" -ErrorAction SilentlyContinue) {
   Write-Warning "npx.cmd was not found. Reopen PowerShell or reinstall Node.js."
 }
 
+Write-Step "Installation status"
+Write-InstallStatus -Name "Node.js" -Installed (Test-CommandAvailable "node.exe") -Fix "install Node.js LTS"
+Write-InstallStatus -Name "npm.cmd" -Installed (Test-CommandAvailable "npm.cmd") -Fix "reopen PowerShell or reinstall Node.js LTS"
+Write-InstallStatus -Name "npx.cmd" -Installed (Test-CommandAvailable "npx.cmd") -Fix "reopen PowerShell or reinstall Node.js LTS"
+Write-InstallStatus -Name "@waishnav/devspace" -Installed (Test-DevSpaceAvailable) -Fix "run npm.cmd install -g @waishnav/devspace"
+Write-InstallStatus -Name "ngrok" -Installed ((Test-CommandAvailable "ngrok.exe") -or (Test-Path $ngrokLocalPath)) -Fix "install ngrok or keep bin\ngrok.exe"
+Write-InstallStatus -Name "cloudflared" -Installed ((Test-CommandAvailable "cloudflared.exe") -or (Test-Path $cloudflaredFallbackPath)) -Fix "install cloudflared"
+
 Write-Host ""
-Write-Host "Done. Close and reopen DevSpace Control before starting DevSpace." -ForegroundColor Green
+Write-Host "Done. Click Check install in DevSpace Control to confirm everything is available." -ForegroundColor Green
+Write-Host "Close and reopen DevSpace Control before starting DevSpace if Node.js was newly installed." -ForegroundColor Green
 Read-Host "Press Enter to close"

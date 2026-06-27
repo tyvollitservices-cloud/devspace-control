@@ -192,41 +192,163 @@ function Append-Status($Text) {
   $statusBox.AppendText("[$timestamp] $Text`r`n")
 }
 
+function Format-MultilineText {
+  param([string] $Text)
+  return ($Text -replace "`r?`n", "`r`n").Trim()
+}
+
+function Get-CommandVersion {
+  param(
+    [string] $Command,
+    [string[]] $Arguments
+  )
+
+  try {
+    $cmd = Get-Command $Command -ErrorAction Stop
+    $output = & $cmd.Source @Arguments 2>&1 | Select-Object -First 1
+    return [string]$output
+  } catch {
+    return $null
+  }
+}
+
+function Get-RequirementStatusText {
+  $nodeVersion = Get-CommandVersion -Command "node.exe" -Arguments @("--version")
+  $npmVersion = Get-CommandVersion -Command "npm.cmd" -Arguments @("--version")
+  $npxVersion = Get-CommandVersion -Command "npx.cmd" -Arguments @("--version")
+  $ngrokPath = Get-NgrokCommand
+  $cloudflaredPath = Get-CloudflaredCommand
+
+  $devspaceStatus = $null
+  if ($npxVersion) {
+    try {
+      $help = & npx.cmd --yes @waishnav/devspace --help 2>&1 | Select-Object -First 1
+      if ($LASTEXITCODE -eq 0 -and $help) {
+        $devspaceStatus = "available through npx.cmd"
+      }
+    } catch {
+      $devspaceStatus = $null
+    }
+  }
+
+  $ngrokVersion = $null
+  if ($ngrokPath) {
+    try {
+      $ngrokVersion = & $ngrokPath version 2>&1 | Select-Object -First 1
+    } catch {
+      $ngrokVersion = $ngrokPath
+    }
+  }
+
+  $cloudflaredVersion = $null
+  if ($cloudflaredPath) {
+    try {
+      $cloudflaredVersion = & $cloudflaredPath --version 2>&1 | Select-Object -First 1
+    } catch {
+      $cloudflaredVersion = $cloudflaredPath
+    }
+  }
+
+  $lines = @(
+    "DevSpace Control Installation Check",
+    "",
+    "Required:",
+    "$(if ($nodeVersion) { '[OK]      Node.js: ' + $nodeVersion } else { '[MISSING] Node.js: install with winget install --id OpenJS.NodeJS.LTS' })",
+    "$(if ($npmVersion) { '[OK]      npm.cmd: ' + $npmVersion } else { '[MISSING] npm.cmd: reinstall Node.js LTS or reopen PowerShell after installing Node.js' })",
+    "$(if ($npxVersion) { '[OK]      npx.cmd: ' + $npxVersion } else { '[MISSING] npx.cmd: reinstall Node.js LTS or reopen PowerShell after installing Node.js' })",
+    "$(if ($devspaceStatus) { '[OK]      @waishnav/devspace: ' + $devspaceStatus } else { '[MISSING] @waishnav/devspace: run npm.cmd install -g @waishnav/devspace' })",
+    "",
+    "Optional tunnels:",
+    "$(if ($ngrokVersion) { '[OK]      ngrok: ' + $ngrokVersion } else { '[MISSING] ngrok: install with winget install --id Ngrok.Ngrok' })",
+    "$(if ($cloudflaredVersion) { '[OK]      cloudflared: ' + $cloudflaredVersion } else { '[MISSING] cloudflared: install with winget install --id Cloudflare.cloudflared' })",
+    "",
+    "PowerShell policy note:",
+    "If npm or npx is blocked, use npm.cmd and npx.cmd commands."
+  )
+
+  return Format-MultilineText ($lines -join "`n")
+}
+
+function Show-TextWindow {
+  param(
+    [string] $Title,
+    [string] $Text,
+    [int] $Width = 820,
+    [int] $Height = 560
+  )
+
+  $textForm = New-Object Windows.Forms.Form
+  $textForm.Text = $Title
+  $textForm.Width = $Width
+  $textForm.Height = $Height
+  $textForm.StartPosition = "CenterParent"
+
+  $box = New-Object Windows.Forms.TextBox
+  $box.Multiline = $true
+  $box.ReadOnly = $true
+  $box.ScrollBars = "Both"
+  $box.WordWrap = $false
+  $box.Dock = "Fill"
+  $box.Font = New-Object Drawing.Font("Consolas", 10)
+  $box.Text = Format-MultilineText $Text
+  $textForm.Controls.Add($box)
+  $textForm.ShowDialog($form) | Out-Null
+}
+
 function Get-SetupStepsText {
   return @"
-Install requirements:
+INSTALL REQUIREMENTS
 
-1. Click Install reqs, or run these commands on the remote PC:
+Option A: from this app
+
+1. Click Install reqs.
+2. Wait for the installer to finish.
+3. Click Check install.
+4. Close and reopen DevSpace Control if Node.js was newly installed.
+
+Option B: manual commands on the remote PC
+
+1. Install Node.js LTS:
    winget install --id OpenJS.NodeJS.LTS
+
+2. Install DevSpace:
    npm.cmd install -g @waishnav/devspace
+
+3. Install tunnel tools:
    winget install --id Ngrok.Ngrok
    winget install --id Cloudflare.cloudflared
 
-2. If PowerShell blocks npm or npx, use npm.cmd and npx.cmd:
+If PowerShell blocks npm or npx, use npm.cmd and npx.cmd:
+
    npm.cmd install -g @waishnav/devspace
    npx.cmd --yes @waishnav/devspace doctor
 
-DevSpace Control setup:
+DEVSPACE CONTROL SETUP
 
 1. Set Allowed project root to the folder ChatGPT may access.
 2. Keep Local port as 7676 unless that port is already used.
-3. Put the ChatGPT public fallback/origin URL in Public base URL.
-   Use the base URL only, without /mcp.
+3. Put the ChatGPT public fallback/origin URL in Public base URL:
+
    Example: https://your-domain.ngrok-free.dev
+
+   Use the base URL only. Do not add /mcp here.
+
 4. Click Save setup.
 5. Click Start tunnel.
 6. Click Start.
 7. Click Copy MCP URL.
 
-ChatGPT setup:
+CHATGPT SETUP
 
 1. Use ChatGPT web on the account/workspace that supports custom apps.
 2. Set Server URL to the copied MCP URL:
+
    https://your-domain.ngrok-free.dev/mcp
+
 3. Use OAuth when the setup screen supports it.
 4. Use the Owner password from this window when asked to approve access.
 
-Notes:
+NOTES
 
 - For a stable ChatGPT URL, use ngrok with an https://...ngrok-free.dev domain.
 - For a temporary Cloudflare URL, leave Public base URL local or empty before Start tunnel.
@@ -235,21 +357,11 @@ Notes:
 }
 
 function Show-SetupSteps {
-  $setupForm = New-Object Windows.Forms.Form
-  $setupForm.Text = "DevSpace Setup Steps"
-  $setupForm.Width = 780
-  $setupForm.Height = 620
-  $setupForm.StartPosition = "CenterParent"
+  Show-TextWindow -Title "DevSpace Setup Steps" -Text (Get-SetupStepsText) -Width 860 -Height 680
+}
 
-  $box = New-Object Windows.Forms.TextBox
-  $box.Multiline = $true
-  $box.ReadOnly = $true
-  $box.ScrollBars = "Both"
-  $box.Dock = "Fill"
-  $box.Font = New-Object Drawing.Font("Consolas", 10)
-  $box.Text = Get-SetupStepsText
-  $setupForm.Controls.Add($box)
-  $setupForm.ShowDialog($form) | Out-Null
+function Show-InstallCheck {
+  Show-TextWindow -Title "DevSpace Installation Check" -Text (Get-RequirementStatusText) -Width 860 -Height 460
 }
 
 function Install-Requirements {
@@ -770,9 +882,16 @@ $installReqsButton.Size = New-Object Drawing.Size(110, 34)
 $installReqsButton.Add_Click({ Install-Requirements })
 $form.Controls.Add($installReqsButton)
 
+$checkInstallButton = New-Object Windows.Forms.Button
+$checkInstallButton.Text = "Check install"
+$checkInstallButton.Location = New-Object Drawing.Point(146, 372)
+$checkInstallButton.Size = New-Object Drawing.Size(110, 34)
+$checkInstallButton.Add_Click({ Show-InstallCheck })
+$form.Controls.Add($checkInstallButton)
+
 $setupStepsButton = New-Object Windows.Forms.Button
 $setupStepsButton.Text = "Setup steps"
-$setupStepsButton.Location = New-Object Drawing.Point(146, 372)
+$setupStepsButton.Location = New-Object Drawing.Point(270, 372)
 $setupStepsButton.Size = New-Object Drawing.Size(110, 34)
 $setupStepsButton.Add_Click({ Show-SetupSteps })
 $form.Controls.Add($setupStepsButton)

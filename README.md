@@ -67,6 +67,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-DevSpace-Requi
 The installer uses `npm.cmd` and `npx.cmd`, so it works even when PowerShell
 blocks `npm.ps1` or `npx.ps1` through the execution policy.
 
+After installation, click `Check install` in the launcher to confirm Node.js,
+npm, npx, DevSpace, ngrok, and cloudflared are available.
+
 ```powershell
 winget install --id OpenJS.NodeJS.LTS
 npm install -g @waishnav/devspace
