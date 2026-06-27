@@ -1,0 +1,32 @@
+# DevSpace Control requirements
+#
+# This project is a Windows PowerShell launcher, not a Python package.
+# Use this file as the install checklist for the required external tools.
+
+Required:
+- Windows
+- PowerShell
+- Node.js LTS and npm
+- @waishnav/devspace
+
+Optional tunnel providers:
+- ngrok
+- cloudflared
+
+Windows install commands:
+
+winget install --id OpenJS.NodeJS.LTS
+winget install --id Ngrok.Ngrok
+winget install --id Cloudflare.cloudflared
+
+DevSpace package:
+
+npm install -g @waishnav/devspace
+
+Verify installation:
+
+node --version
+npm --version
+npx @waishnav/devspace --help
+ngrok version
+cloudflared --version

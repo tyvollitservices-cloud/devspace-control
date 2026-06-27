@@ -50,6 +50,21 @@ Do not commit the `.devspace` folder or copied Owner passwords.
 
 ## First-time launcher setup
 
+Install the required external tools first. The same checklist is kept in
+`requirements.txt`.
+
+```powershell
+winget install --id OpenJS.NodeJS.LTS
+npm install -g @waishnav/devspace
+```
+
+For public tunnels, install at least one tunnel provider:
+
+```powershell
+winget install --id Ngrok.Ngrok
+winget install --id Cloudflare.cloudflared
+```
+
 1. Double-click `Start-DevSpace-Launcher.bat`.
 2. Confirm the Allowed root is the folder that contains the projects ChatGPT
    should be allowed to access.
@@ -72,6 +87,8 @@ config folder` in the launcher to inspect those files locally.
 - `@waishnav/devspace`, launched through `npx @waishnav/devspace serve`
 - Optional: ngrok for a stable public URL
 - Optional: cloudflared for a temporary Cloudflare quick tunnel
+
+See `requirements.txt` for copy-paste install and verification commands.
 
 ## ngrok setup
 
