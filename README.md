@@ -25,6 +25,7 @@ Double-click `Start-DevSpace-Launcher.bat` to open the DevSpace control UI.
 
 - `Start-DevSpace-Launcher.bat` - double-click launcher for Windows
 - `DevSpace-Launcher.ps1` - main PowerShell UI and process manager
+- `Install-DevSpace-Requirements.ps1` - installer for Node.js, DevSpace, ngrok, and cloudflared
 - `README.md` - project documentation
 - `.gitignore` - keeps local logs, secrets, binaries, and machine-specific files out of git
 
@@ -52,6 +53,16 @@ Do not commit the `.devspace` folder or copied Owner passwords.
 
 Install the required external tools first. The same checklist is kept in
 `requirements.txt`.
+
+From the launcher, click `Install reqs` to open the requirements installer, or
+run it manually:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-DevSpace-Requirements.ps1
+```
+
+The installer uses `npm.cmd` and `npx.cmd`, so it works even when PowerShell
+blocks `npm.ps1` or `npx.ps1` through the execution policy.
 
 ```powershell
 winget install --id OpenJS.NodeJS.LTS

@@ -30,3 +30,14 @@ npm --version
 npx @waishnav/devspace --help
 ngrok version
 cloudflared --version
+
+PowerShell execution policy note:
+
+If npm or npx fails with "running scripts is disabled", use npm.cmd and npx.cmd:
+
+npm.cmd install -g @waishnav/devspace
+npx.cmd --yes @waishnav/devspace doctor
+
+Launcher installer:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-DevSpace-Requirements.ps1

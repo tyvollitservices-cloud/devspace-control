@@ -18,6 +18,7 @@ $script:ConfigPath = Join-Path $script:ConfigDir "config.json"
 $script:AuthPath = Join-Path $script:ConfigDir "auth.json"
 $script:CloudflaredFallbackPath = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
 $script:NgrokLocalPath = Join-Path $script:RootDir "bin\ngrok.exe"
+$script:RequirementsInstallerPath = Join-Path $script:RootDir "Install-DevSpace-Requirements.ps1"
 
 function New-OwnerToken {
   $bytes = New-Object byte[] 32
@@ -189,6 +190,80 @@ function Get-OwnerPassword {
 function Append-Status($Text) {
   $timestamp = Get-Date -Format "HH:mm:ss"
   $statusBox.AppendText("[$timestamp] $Text`r`n")
+}
+
+function Get-SetupStepsText {
+  return @"
+Install requirements:
+
+1. Click Install reqs, or run these commands on the remote PC:
+   winget install --id OpenJS.NodeJS.LTS
+   npm.cmd install -g @waishnav/devspace
+   winget install --id Ngrok.Ngrok
+   winget install --id Cloudflare.cloudflared
+
+2. If PowerShell blocks npm or npx, use npm.cmd and npx.cmd:
+   npm.cmd install -g @waishnav/devspace
+   npx.cmd --yes @waishnav/devspace doctor
+
+DevSpace Control setup:
+
+1. Set Allowed project root to the folder ChatGPT may access.
+2. Keep Local port as 7676 unless that port is already used.
+3. Put the ChatGPT public fallback/origin URL in Public base URL.
+   Use the base URL only, without /mcp.
+   Example: https://your-domain.ngrok-free.dev
+4. Click Save setup.
+5. Click Start tunnel.
+6. Click Start.
+7. Click Copy MCP URL.
+
+ChatGPT setup:
+
+1. Use ChatGPT web on the account/workspace that supports custom apps.
+2. Set Server URL to the copied MCP URL:
+   https://your-domain.ngrok-free.dev/mcp
+3. Use OAuth when the setup screen supports it.
+4. Use the Owner password from this window when asked to approve access.
+
+Notes:
+
+- For a stable ChatGPT URL, use ngrok with an https://...ngrok-free.dev domain.
+- For a temporary Cloudflare URL, leave Public base URL local or empty before Start tunnel.
+- If the tunnel URL changes, restart DevSpace so the new host is allowed.
+"@
+}
+
+function Show-SetupSteps {
+  $setupForm = New-Object Windows.Forms.Form
+  $setupForm.Text = "DevSpace Setup Steps"
+  $setupForm.Width = 780
+  $setupForm.Height = 620
+  $setupForm.StartPosition = "CenterParent"
+
+  $box = New-Object Windows.Forms.TextBox
+  $box.Multiline = $true
+  $box.ReadOnly = $true
+  $box.ScrollBars = "Both"
+  $box.Dock = "Fill"
+  $box.Font = New-Object Drawing.Font("Consolas", 10)
+  $box.Text = Get-SetupStepsText
+  $setupForm.Controls.Add($box)
+  $setupForm.ShowDialog($form) | Out-Null
+}
+
+function Install-Requirements {
+  if (-not (Test-Path $script:RequirementsInstallerPath)) {
+    [Windows.Forms.MessageBox]::Show("Install-DevSpace-Requirements.ps1 was not found.", "DevSpace Launcher")
+    return
+  }
+
+  Append-Status "Opening requirements installer..."
+  Start-Process powershell.exe -ArgumentList @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", "`"$script:RequirementsInstallerPath`""
+  )
 }
 
 function Refresh-Ui {
@@ -497,7 +572,7 @@ if ($existingPublicBaseUrl -match "^https://[a-zA-Z0-9-]+\.trycloudflare\.com/?$
 $form = New-Object Windows.Forms.Form
 $form.Text = "DevSpace Control"
 $form.Width = 760
-$form.Height = 560
+$form.Height = 610
 $form.StartPosition = "CenterScreen"
 $form.Font = New-Object Drawing.Font("Segoe UI", 10)
 
@@ -688,8 +763,22 @@ $openTunnelLogButton.Add_Click({
 })
 $form.Controls.Add($openTunnelLogButton)
 
+$installReqsButton = New-Object Windows.Forms.Button
+$installReqsButton.Text = "Install reqs"
+$installReqsButton.Location = New-Object Drawing.Point(22, 372)
+$installReqsButton.Size = New-Object Drawing.Size(110, 34)
+$installReqsButton.Add_Click({ Install-Requirements })
+$form.Controls.Add($installReqsButton)
+
+$setupStepsButton = New-Object Windows.Forms.Button
+$setupStepsButton.Text = "Setup steps"
+$setupStepsButton.Location = New-Object Drawing.Point(146, 372)
+$setupStepsButton.Size = New-Object Drawing.Size(110, 34)
+$setupStepsButton.Add_Click({ Show-SetupSteps })
+$form.Controls.Add($setupStepsButton)
+
 $statusBox = New-Object Windows.Forms.TextBox
-$statusBox.Location = New-Object Drawing.Point(22, 380)
+$statusBox.Location = New-Object Drawing.Point(22, 426)
 $statusBox.Size = New-Object Drawing.Size(690, 120)
 $statusBox.Multiline = $true
 $statusBox.ReadOnly = $true
