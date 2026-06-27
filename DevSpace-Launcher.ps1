@@ -251,7 +251,7 @@ function Start-DevSpace {
 
   $process = New-Object Diagnostics.Process
   $process.StartInfo.FileName = $npx.Source
-  $process.StartInfo.Arguments = "@waishnav/devspace serve"
+  $process.StartInfo.Arguments = "--yes @waishnav/devspace serve"
   $process.StartInfo.WorkingDirectory = $script:DefaultAllowedRoot
   $process.StartInfo.UseShellExecute = $false
   $process.StartInfo.CreateNoWindow = $true
@@ -467,7 +467,7 @@ function Run-Doctor {
   Save-DevSpaceConfig -AllowedRoot $allowedRootBox.Text.Trim() -Port ([int]$portBox.Value) -PublicBaseUrl $publicUrlBox.Text.Trim()
   Append-Status "Running devspace doctor..."
 
-  $output = & npx.cmd @waishnav/devspace doctor 2>&1
+  $output = & npx.cmd --yes @waishnav/devspace doctor 2>&1
   $output | Add-Content -Path $script:LogFile
 
   $doctorForm = New-Object Windows.Forms.Form
