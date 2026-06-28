@@ -1,5 +1,14 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class NativeMethods {
+  [DllImport("user32.dll", CharSet = CharSet.Auto)]
+  public static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+}
+"@
 
 $ErrorActionPreference = "Stop"
 
@@ -226,6 +235,42 @@ function Set-TextStart {
       return
     }
   }
+}
+
+function Set-TextMargins {
+  param(
+    $Control,
+    [int] $Left = 8,
+    [int] $Right = 4
+  )
+
+  if (-not $Control) {
+    return
+  }
+
+  try {
+    $emSetMargins = 0xD3
+    $ecLeftMargin = 0x1
+    $ecRightMargin = 0x2
+    $marginValue = ($Right -shl 16) -bor $Left
+    [NativeMethods]::SendMessage($Control.Handle, $emSetMargins, [IntPtr]($ecLeftMargin -bor $ecRightMargin), [IntPtr]$marginValue) | Out-Null
+  } catch {
+  }
+
+  try {
+    foreach ($child in $Control.Controls) {
+      Set-TextMargins -Control $child -Left $Left -Right $Right
+    }
+  } catch {
+  }
+}
+
+function Apply-InputTextMargins {
+  Set-TextMargins $allowedRootBox
+  Set-TextMargins $portBox
+  Set-TextMargins $publicUrlBox
+  Set-TextMargins $mcpUrlBox
+  Set-TextMargins $passwordBox
 }
 
 function Format-MultilineText {
@@ -1052,6 +1097,7 @@ Append-Status "Ready. Use a public HTTPS tunnel URL for ChatGPT; local URL is fi
 
 $form.Add_Shown({
   $checkInstallButton.Focus() | Out-Null
+  Apply-InputTextMargins
   Set-TextStart $allowedRootBox
   Set-TextStart $publicUrlBox
   Set-TextStart $mcpUrlBox
