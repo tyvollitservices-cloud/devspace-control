@@ -718,8 +718,8 @@ if ($existingPublicBaseUrl -match "^https://[a-zA-Z0-9-]+\.trycloudflare\.com/?$
 
 $form = New-Object Windows.Forms.Form
 $form.Text = "DevSpace Control"
-$form.Width = 760
-$form.Height = 610
+$form.Width = 900
+$form.Height = 760
 $form.StartPosition = "CenterScreen"
 $form.Font = New-Object Drawing.Font("Segoe UI", 10)
 
@@ -727,191 +727,265 @@ $title = New-Object Windows.Forms.Label
 $title.Text = "DevSpace Control"
 $title.Font = New-Object Drawing.Font("Segoe UI", 16, [Drawing.FontStyle]::Bold)
 $title.Location = New-Object Drawing.Point(18, 16)
-$title.Size = New-Object Drawing.Size(320, 34)
+$title.Size = New-Object Drawing.Size(360, 34)
 $form.Controls.Add($title)
+
+$subtitle = New-Object Windows.Forms.Label
+$subtitle.Text = "Configure DevSpace, start the tunnel, then copy the MCP URL into ChatGPT."
+$subtitle.Location = New-Object Drawing.Point(22, 48)
+$subtitle.Size = New-Object Drawing.Size(560, 22)
+$subtitle.ForeColor = [Drawing.Color]::DimGray
+$form.Controls.Add($subtitle)
 
 $statusLabel = New-Object Windows.Forms.Label
 $statusLabel.Text = "Stopped"
 $statusLabel.Font = New-Object Drawing.Font("Segoe UI", 12, [Drawing.FontStyle]::Bold)
-$statusLabel.Location = New-Object Drawing.Point(620, 22)
-$statusLabel.Size = New-Object Drawing.Size(100, 28)
+$statusLabel.Location = New-Object Drawing.Point(745, 18)
+$statusLabel.Size = New-Object Drawing.Size(115, 28)
 $form.Controls.Add($statusLabel)
 
 $tunnelStatusLabel = New-Object Windows.Forms.Label
 $tunnelStatusLabel.Text = "Tunnel stopped"
 $tunnelStatusLabel.Font = New-Object Drawing.Font("Segoe UI", 9, [Drawing.FontStyle]::Bold)
-$tunnelStatusLabel.Location = New-Object Drawing.Point(592, 50)
-$tunnelStatusLabel.Size = New-Object Drawing.Size(130, 24)
+$tunnelStatusLabel.Location = New-Object Drawing.Point(710, 46)
+$tunnelStatusLabel.Size = New-Object Drawing.Size(150, 24)
 $form.Controls.Add($tunnelStatusLabel)
+
+$setupGroup = New-Object Windows.Forms.GroupBox
+$setupGroup.Text = "Setup"
+$setupGroup.Location = New-Object Drawing.Point(22, 82)
+$setupGroup.Size = New-Object Drawing.Size(838, 230)
+$form.Controls.Add($setupGroup)
 
 $allowedRootLabel = New-Object Windows.Forms.Label
 $allowedRootLabel.Text = "Allowed project root"
-$allowedRootLabel.Location = New-Object Drawing.Point(22, 70)
+$allowedRootLabel.Location = New-Object Drawing.Point(18, 32)
 $allowedRootLabel.Size = New-Object Drawing.Size(180, 24)
-$form.Controls.Add($allowedRootLabel)
+$setupGroup.Controls.Add($allowedRootLabel)
 
 $allowedRootBox = New-Object Windows.Forms.TextBox
-$allowedRootBox.Location = New-Object Drawing.Point(210, 68)
-$allowedRootBox.Size = New-Object Drawing.Size(500, 28)
+$allowedRootBox.Location = New-Object Drawing.Point(190, 30)
+$allowedRootBox.Size = New-Object Drawing.Size(520, 28)
 $allowedRootBox.Text = if ($existingConfig.allowedRoots -and $existingConfig.allowedRoots.Count -gt 0) { $existingConfig.allowedRoots[0] } else { $script:DefaultAllowedRoot }
-$form.Controls.Add($allowedRootBox)
+$setupGroup.Controls.Add($allowedRootBox)
+
+$browseRootButton = New-Object Windows.Forms.Button
+$browseRootButton.Text = "Browse"
+$browseRootButton.Location = New-Object Drawing.Point(720, 29)
+$browseRootButton.Size = New-Object Drawing.Size(95, 30)
+$browseRootButton.Add_Click({
+  $dialog = New-Object Windows.Forms.FolderBrowserDialog
+  $dialog.Description = "Choose the folder ChatGPT can access"
+  $dialog.SelectedPath = $allowedRootBox.Text
+  if ($dialog.ShowDialog($form) -eq [Windows.Forms.DialogResult]::OK) {
+    $allowedRootBox.Text = $dialog.SelectedPath
+    Append-Status "Selected allowed project root."
+  }
+})
+$setupGroup.Controls.Add($browseRootButton)
 
 $portLabel = New-Object Windows.Forms.Label
 $portLabel.Text = "Local port"
-$portLabel.Location = New-Object Drawing.Point(22, 110)
+$portLabel.Location = New-Object Drawing.Point(18, 72)
 $portLabel.Size = New-Object Drawing.Size(180, 24)
-$form.Controls.Add($portLabel)
+$setupGroup.Controls.Add($portLabel)
 
 $portBox = New-Object Windows.Forms.NumericUpDown
-$portBox.Location = New-Object Drawing.Point(210, 108)
+$portBox.Location = New-Object Drawing.Point(190, 70)
 $portBox.Size = New-Object Drawing.Size(120, 28)
 $portBox.Minimum = 1
 $portBox.Maximum = 65535
 $portBox.Value = if ($existingConfig.port) { [int]$existingConfig.port } else { 7676 }
-$form.Controls.Add($portBox)
+$setupGroup.Controls.Add($portBox)
 
 $publicUrlLabel = New-Object Windows.Forms.Label
 $publicUrlLabel.Text = "Public base URL"
-$publicUrlLabel.Location = New-Object Drawing.Point(22, 150)
+$publicUrlLabel.Location = New-Object Drawing.Point(18, 112)
 $publicUrlLabel.Size = New-Object Drawing.Size(180, 24)
-$form.Controls.Add($publicUrlLabel)
+$setupGroup.Controls.Add($publicUrlLabel)
 
 $publicUrlBox = New-Object Windows.Forms.TextBox
-$publicUrlBox.Location = New-Object Drawing.Point(210, 148)
-$publicUrlBox.Size = New-Object Drawing.Size(500, 28)
+$publicUrlBox.Location = New-Object Drawing.Point(190, 110)
+$publicUrlBox.Size = New-Object Drawing.Size(625, 28)
 $publicUrlBox.Text = $existingPublicBaseUrl
-$form.Controls.Add($publicUrlBox)
+$setupGroup.Controls.Add($publicUrlBox)
 
 $mcpUrlLabel = New-Object Windows.Forms.Label
 $mcpUrlLabel.Text = "MCP URL"
-$mcpUrlLabel.Location = New-Object Drawing.Point(22, 190)
+$mcpUrlLabel.Location = New-Object Drawing.Point(18, 152)
 $mcpUrlLabel.Size = New-Object Drawing.Size(180, 24)
-$form.Controls.Add($mcpUrlLabel)
+$setupGroup.Controls.Add($mcpUrlLabel)
 
 $mcpUrlBox = New-Object Windows.Forms.TextBox
-$mcpUrlBox.Location = New-Object Drawing.Point(210, 188)
-$mcpUrlBox.Size = New-Object Drawing.Size(500, 28)
+$mcpUrlBox.Location = New-Object Drawing.Point(190, 150)
+$mcpUrlBox.Size = New-Object Drawing.Size(625, 28)
 $mcpUrlBox.ReadOnly = $true
-$form.Controls.Add($mcpUrlBox)
+$setupGroup.Controls.Add($mcpUrlBox)
 
 $passwordLabel = New-Object Windows.Forms.Label
 $passwordLabel.Text = "Owner password"
-$passwordLabel.Location = New-Object Drawing.Point(22, 230)
+$passwordLabel.Location = New-Object Drawing.Point(18, 190)
 $passwordLabel.Size = New-Object Drawing.Size(180, 24)
-$form.Controls.Add($passwordLabel)
+$setupGroup.Controls.Add($passwordLabel)
 
 $passwordBox = New-Object Windows.Forms.TextBox
-$passwordBox.Location = New-Object Drawing.Point(210, 228)
-$passwordBox.Size = New-Object Drawing.Size(370, 28)
+$passwordBox.Location = New-Object Drawing.Point(190, 188)
+$passwordBox.Size = New-Object Drawing.Size(490, 28)
 $passwordBox.ReadOnly = $false
 $passwordBox.Text = if ($existingAuth.ownerToken) { $existingAuth.ownerToken } else { "" }
-$form.Controls.Add($passwordBox)
+$setupGroup.Controls.Add($passwordBox)
 
 $generatePasswordButton = New-Object Windows.Forms.Button
 $generatePasswordButton.Text = "Generate"
-$generatePasswordButton.Location = New-Object Drawing.Point(592, 228)
-$generatePasswordButton.Size = New-Object Drawing.Size(120, 28)
+$generatePasswordButton.Location = New-Object Drawing.Point(695, 187)
+$generatePasswordButton.Size = New-Object Drawing.Size(120, 30)
 $generatePasswordButton.Add_Click({
   $passwordBox.Text = New-OwnerToken
   Append-Status "Generated new Owner password. Click Save setup to apply it."
 })
-$form.Controls.Add($generatePasswordButton)
+$setupGroup.Controls.Add($generatePasswordButton)
+
+$workflowGroup = New-Object Windows.Forms.GroupBox
+$workflowGroup.Text = "Workflow"
+$workflowGroup.Location = New-Object Drawing.Point(22, 322)
+$workflowGroup.Size = New-Object Drawing.Size(838, 120)
+$form.Controls.Add($workflowGroup)
 
 $saveButton = New-Object Windows.Forms.Button
-$saveButton.Text = "Save setup"
-$saveButton.Location = New-Object Drawing.Point(22, 280)
-$saveButton.Size = New-Object Drawing.Size(110, 34)
+$saveButton.Text = "2 Save setup"
+$saveButton.Location = New-Object Drawing.Point(154, 32)
+$saveButton.Size = New-Object Drawing.Size(126, 34)
 $saveButton.Add_Click({
   if (Save-CurrentSetup) {
     Append-Status "Saved DevSpace config and Owner password."
     Refresh-Ui
   }
 })
-$form.Controls.Add($saveButton)
+$workflowGroup.Controls.Add($saveButton)
 
 $startButton = New-Object Windows.Forms.Button
-$startButton.Text = "Start"
-$startButton.Location = New-Object Drawing.Point(146, 280)
-$startButton.Size = New-Object Drawing.Size(90, 34)
+$startButton.Text = "4 Start DevSpace"
+$startButton.Location = New-Object Drawing.Point(550, 32)
+$startButton.Size = New-Object Drawing.Size(126, 34)
 $startButton.Add_Click({ Start-DevSpace })
-$form.Controls.Add($startButton)
+$workflowGroup.Controls.Add($startButton)
 
 $stopButton = New-Object Windows.Forms.Button
-$stopButton.Text = "Stop"
-$stopButton.Location = New-Object Drawing.Point(250, 280)
-$stopButton.Size = New-Object Drawing.Size(90, 34)
+$stopButton.Text = "Stop DevSpace"
+$stopButton.Location = New-Object Drawing.Point(682, 32)
+$stopButton.Size = New-Object Drawing.Size(126, 34)
 $stopButton.Add_Click({ Stop-DevSpace })
-$form.Controls.Add($stopButton)
+$workflowGroup.Controls.Add($stopButton)
 
 $doctorButton = New-Object Windows.Forms.Button
 $doctorButton.Text = "Doctor"
-$doctorButton.Location = New-Object Drawing.Point(354, 280)
-$doctorButton.Size = New-Object Drawing.Size(90, 34)
+$doctorButton.Location = New-Object Drawing.Point(154, 74)
+$doctorButton.Size = New-Object Drawing.Size(126, 30)
 $doctorButton.Add_Click({ Run-Doctor })
-$form.Controls.Add($doctorButton)
+$workflowGroup.Controls.Add($doctorButton)
 
 $startTunnelButton = New-Object Windows.Forms.Button
-$startTunnelButton.Text = "Start tunnel"
-$startTunnelButton.Location = New-Object Drawing.Point(458, 280)
-$startTunnelButton.Size = New-Object Drawing.Size(120, 34)
+$startTunnelButton.Text = "3 Start tunnel"
+$startTunnelButton.Location = New-Object Drawing.Point(286, 32)
+$startTunnelButton.Size = New-Object Drawing.Size(126, 34)
 $startTunnelButton.Add_Click({ Start-Tunnel })
-$form.Controls.Add($startTunnelButton)
+$workflowGroup.Controls.Add($startTunnelButton)
 
 $stopTunnelButton = New-Object Windows.Forms.Button
 $stopTunnelButton.Text = "Stop tunnel"
-$stopTunnelButton.Location = New-Object Drawing.Point(592, 280)
-$stopTunnelButton.Size = New-Object Drawing.Size(120, 34)
+$stopTunnelButton.Location = New-Object Drawing.Point(418, 32)
+$stopTunnelButton.Size = New-Object Drawing.Size(126, 34)
 $stopTunnelButton.Add_Click({ Stop-Tunnel })
-$form.Controls.Add($stopTunnelButton)
+$workflowGroup.Controls.Add($stopTunnelButton)
+
+$installReqsButton = New-Object Windows.Forms.Button
+$installReqsButton.Text = "Install reqs"
+$installReqsButton.Location = New-Object Drawing.Point(22, 74)
+$installReqsButton.Size = New-Object Drawing.Size(126, 30)
+$installReqsButton.Add_Click({ Install-Requirements })
+$workflowGroup.Controls.Add($installReqsButton)
+
+$checkInstallButton = New-Object Windows.Forms.Button
+$checkInstallButton.Text = "1 Check install"
+$checkInstallButton.Location = New-Object Drawing.Point(22, 32)
+$checkInstallButton.Size = New-Object Drawing.Size(126, 34)
+$checkInstallButton.Add_Click({ Show-InstallCheck })
+$workflowGroup.Controls.Add($checkInstallButton)
+
+$setupStepsButton = New-Object Windows.Forms.Button
+$setupStepsButton.Text = "Setup steps"
+$setupStepsButton.Location = New-Object Drawing.Point(286, 74)
+$setupStepsButton.Size = New-Object Drawing.Size(126, 30)
+$setupStepsButton.Add_Click({ Show-SetupSteps })
+$workflowGroup.Controls.Add($setupStepsButton)
+
+$outputGroup = New-Object Windows.Forms.GroupBox
+$outputGroup.Text = "ChatGPT values"
+$outputGroup.Location = New-Object Drawing.Point(22, 452)
+$outputGroup.Size = New-Object Drawing.Size(838, 76)
+$form.Controls.Add($outputGroup)
 
 $copyUrlButton = New-Object Windows.Forms.Button
 $copyUrlButton.Text = "Copy MCP URL"
-$copyUrlButton.Location = New-Object Drawing.Point(458, 326)
-$copyUrlButton.Size = New-Object Drawing.Size(120, 34)
+$copyUrlButton.Location = New-Object Drawing.Point(22, 28)
+$copyUrlButton.Size = New-Object Drawing.Size(170, 34)
 $copyUrlButton.Add_Click({
   [Windows.Forms.Clipboard]::SetText($mcpUrlBox.Text)
   Append-Status "Copied MCP URL."
 })
-$form.Controls.Add($copyUrlButton)
+$outputGroup.Controls.Add($copyUrlButton)
 
 $copyPassButton = New-Object Windows.Forms.Button
-$copyPassButton.Text = "Copy password"
-$copyPassButton.Location = New-Object Drawing.Point(592, 326)
-$copyPassButton.Size = New-Object Drawing.Size(120, 34)
+$copyPassButton.Text = "Copy Owner password"
+$copyPassButton.Location = New-Object Drawing.Point(206, 28)
+$copyPassButton.Size = New-Object Drawing.Size(170, 34)
 $copyPassButton.Add_Click({
   if ($passwordBox.Text) {
     [Windows.Forms.Clipboard]::SetText($passwordBox.Text)
     Append-Status "Copied Owner password."
   }
 })
-$form.Controls.Add($copyPassButton)
+$outputGroup.Controls.Add($copyPassButton)
+
+$outputHint = New-Object Windows.Forms.Label
+$outputHint.Text = "Use the MCP URL as the ChatGPT server URL. Use the Owner password when approving access."
+$outputHint.Location = New-Object Drawing.Point(394, 34)
+$outputHint.Size = New-Object Drawing.Size(420, 24)
+$outputHint.ForeColor = [Drawing.Color]::DimGray
+$outputGroup.Controls.Add($outputHint)
+
+$toolsGroup = New-Object Windows.Forms.GroupBox
+$toolsGroup.Text = "Files and logs"
+$toolsGroup.Location = New-Object Drawing.Point(22, 538)
+$toolsGroup.Size = New-Object Drawing.Size(838, 76)
+$form.Controls.Add($toolsGroup)
 
 $openConfigButton = New-Object Windows.Forms.Button
-$openConfigButton.Text = "Open config folder"
-$openConfigButton.Location = New-Object Drawing.Point(22, 326)
+$openConfigButton.Text = "Config folder"
+$openConfigButton.Location = New-Object Drawing.Point(22, 28)
 $openConfigButton.Size = New-Object Drawing.Size(150, 34)
 $openConfigButton.Add_Click({
   New-Item -ItemType Directory -Force -Path $script:ConfigDir | Out-Null
   Start-Process explorer.exe $script:ConfigDir
 })
-$form.Controls.Add($openConfigButton)
+$toolsGroup.Controls.Add($openConfigButton)
 
 $openLogButton = New-Object Windows.Forms.Button
 $openLogButton.Text = "DevSpace log"
-$openLogButton.Location = New-Object Drawing.Point(186, 326)
-$openLogButton.Size = New-Object Drawing.Size(110, 34)
+$openLogButton.Location = New-Object Drawing.Point(186, 28)
+$openLogButton.Size = New-Object Drawing.Size(130, 34)
 $openLogButton.Add_Click({
   if (-not (Test-Path $script:LogFile)) {
     New-Item -ItemType File -Force -Path $script:LogFile | Out-Null
   }
   Start-Process notepad.exe $script:LogFile
 })
-$form.Controls.Add($openLogButton)
+$toolsGroup.Controls.Add($openLogButton)
 
 $openTunnelLogButton = New-Object Windows.Forms.Button
 $openTunnelLogButton.Text = "Tunnel log"
-$openTunnelLogButton.Location = New-Object Drawing.Point(310, 326)
-$openTunnelLogButton.Size = New-Object Drawing.Size(100, 34)
+$openTunnelLogButton.Location = New-Object Drawing.Point(330, 28)
+$openTunnelLogButton.Size = New-Object Drawing.Size(130, 34)
 $openTunnelLogButton.Add_Click({
   $path = if (Test-Path $script:NgrokLogFile) { $script:NgrokLogFile } else { $script:TunnelLogFile }
   if (-not (Test-Path $path)) {
@@ -919,32 +993,11 @@ $openTunnelLogButton.Add_Click({
   }
   Start-Process notepad.exe $path
 })
-$form.Controls.Add($openTunnelLogButton)
-
-$installReqsButton = New-Object Windows.Forms.Button
-$installReqsButton.Text = "Install reqs"
-$installReqsButton.Location = New-Object Drawing.Point(22, 372)
-$installReqsButton.Size = New-Object Drawing.Size(110, 34)
-$installReqsButton.Add_Click({ Install-Requirements })
-$form.Controls.Add($installReqsButton)
-
-$checkInstallButton = New-Object Windows.Forms.Button
-$checkInstallButton.Text = "Check install"
-$checkInstallButton.Location = New-Object Drawing.Point(146, 372)
-$checkInstallButton.Size = New-Object Drawing.Size(110, 34)
-$checkInstallButton.Add_Click({ Show-InstallCheck })
-$form.Controls.Add($checkInstallButton)
-
-$setupStepsButton = New-Object Windows.Forms.Button
-$setupStepsButton.Text = "Setup steps"
-$setupStepsButton.Location = New-Object Drawing.Point(270, 372)
-$setupStepsButton.Size = New-Object Drawing.Size(110, 34)
-$setupStepsButton.Add_Click({ Show-SetupSteps })
-$form.Controls.Add($setupStepsButton)
+$toolsGroup.Controls.Add($openTunnelLogButton)
 
 $statusBox = New-Object Windows.Forms.TextBox
-$statusBox.Location = New-Object Drawing.Point(22, 426)
-$statusBox.Size = New-Object Drawing.Size(690, 120)
+$statusBox.Location = New-Object Drawing.Point(22, 626)
+$statusBox.Size = New-Object Drawing.Size(838, 86)
 $statusBox.Multiline = $true
 $statusBox.ReadOnly = $true
 $statusBox.ScrollBars = "Vertical"

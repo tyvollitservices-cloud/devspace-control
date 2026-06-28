@@ -83,16 +83,15 @@ winget install --id Cloudflare.cloudflared
 ```
 
 1. Double-click `Start-DevSpace-Launcher.bat`.
-2. Confirm the Allowed root is the folder that contains the projects ChatGPT
-   should be allowed to access.
+2. In the `Setup` section, confirm the Allowed root is the folder that contains
+   the projects ChatGPT should be allowed to access. Use `Browse` if needed.
 3. Keep Local port as `7676` unless another process already uses it.
 4. Set Owner password manually if you want a custom approval password, or click
    `Generate` for a new one.
 5. For local-only testing, leave Public base URL as `http://127.0.0.1:7676`.
 6. For ChatGPT, enter your own stable public base URL, without `/mcp`.
-7. Click `Save setup`.
-8. Click `Start tunnel` if you are using ngrok or Cloudflare.
-9. Click `Start` to start DevSpace.
+7. Follow the numbered `Workflow` buttons: `Check install`, `Save setup`,
+   `Start tunnel`, then `Start DevSpace`.
 
 `Save setup` writes `%USERPROFILE%\.devspace\config.json` and creates the
 Owner password in `%USERPROFILE%\.devspace\auth.json` if needed. If you type a
