@@ -214,6 +214,20 @@ function Append-Status($Text) {
   $statusBox.AppendText("[$timestamp] $Text`r`n")
 }
 
+function Set-TextStart {
+  param($Control)
+
+  if ($Control -and -not $Control.Focused) {
+    try {
+      $Control.SelectionStart = 0
+      $Control.SelectionLength = 0
+      $Control.ScrollToCaret()
+    } catch {
+      return
+    }
+  }
+}
+
 function Format-MultilineText {
   param([string] $Text)
   return ($Text -replace "`r?`n", "`r`n").Trim()
@@ -424,6 +438,11 @@ function Refresh-Ui {
   if (-not $passwordBox.Focused) {
     $passwordBox.Text = if ($owner) { $owner } else { "" }
   }
+
+  Set-TextStart $allowedRootBox
+  Set-TextStart $publicUrlBox
+  Set-TextStart $mcpUrlBox
+  Set-TextStart $passwordBox
 }
 
 function Find-TunnelUrl {
@@ -718,8 +737,9 @@ if ($existingPublicBaseUrl -match "^https://[a-zA-Z0-9-]+\.trycloudflare\.com/?$
 
 $form = New-Object Windows.Forms.Form
 $form.Text = "DevSpace Control"
-$form.Width = 900
-$form.Height = 760
+$form.ClientSize = New-Object Drawing.Size(900, 760)
+$form.MinimumSize = New-Object Drawing.Size(900, 760)
+$form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
 $form.StartPosition = "CenterScreen"
 $form.Font = New-Object Drawing.Font("Segoe UI", 10)
 
@@ -734,6 +754,7 @@ $subtitle = New-Object Windows.Forms.Label
 $subtitle.Text = "Configure DevSpace, start the tunnel, then copy the MCP URL into ChatGPT."
 $subtitle.Location = New-Object Drawing.Point(22, 48)
 $subtitle.Size = New-Object Drawing.Size(560, 22)
+$subtitle.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $subtitle.ForeColor = [Drawing.Color]::DimGray
 $form.Controls.Add($subtitle)
 
@@ -742,6 +763,7 @@ $statusLabel.Text = "Stopped"
 $statusLabel.Font = New-Object Drawing.Font("Segoe UI", 12, [Drawing.FontStyle]::Bold)
 $statusLabel.Location = New-Object Drawing.Point(745, 18)
 $statusLabel.Size = New-Object Drawing.Size(115, 28)
+$statusLabel.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($statusLabel)
 
 $tunnelStatusLabel = New-Object Windows.Forms.Label
@@ -749,12 +771,14 @@ $tunnelStatusLabel.Text = "Tunnel stopped"
 $tunnelStatusLabel.Font = New-Object Drawing.Font("Segoe UI", 9, [Drawing.FontStyle]::Bold)
 $tunnelStatusLabel.Location = New-Object Drawing.Point(710, 46)
 $tunnelStatusLabel.Size = New-Object Drawing.Size(150, 24)
+$tunnelStatusLabel.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($tunnelStatusLabel)
 
 $setupGroup = New-Object Windows.Forms.GroupBox
 $setupGroup.Text = "Setup"
 $setupGroup.Location = New-Object Drawing.Point(22, 82)
 $setupGroup.Size = New-Object Drawing.Size(838, 230)
+$setupGroup.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($setupGroup)
 
 $allowedRootLabel = New-Object Windows.Forms.Label
@@ -766,6 +790,7 @@ $setupGroup.Controls.Add($allowedRootLabel)
 $allowedRootBox = New-Object Windows.Forms.TextBox
 $allowedRootBox.Location = New-Object Drawing.Point(190, 30)
 $allowedRootBox.Size = New-Object Drawing.Size(520, 28)
+$allowedRootBox.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $allowedRootBox.Text = if ($existingConfig.allowedRoots -and $existingConfig.allowedRoots.Count -gt 0) { $existingConfig.allowedRoots[0] } else { $script:DefaultAllowedRoot }
 $setupGroup.Controls.Add($allowedRootBox)
 
@@ -773,6 +798,7 @@ $browseRootButton = New-Object Windows.Forms.Button
 $browseRootButton.Text = "Browse"
 $browseRootButton.Location = New-Object Drawing.Point(720, 29)
 $browseRootButton.Size = New-Object Drawing.Size(95, 30)
+$browseRootButton.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
 $browseRootButton.Add_Click({
   $dialog = New-Object Windows.Forms.FolderBrowserDialog
   $dialog.Description = "Choose the folder ChatGPT can access"
@@ -807,6 +833,7 @@ $setupGroup.Controls.Add($publicUrlLabel)
 $publicUrlBox = New-Object Windows.Forms.TextBox
 $publicUrlBox.Location = New-Object Drawing.Point(190, 110)
 $publicUrlBox.Size = New-Object Drawing.Size(625, 28)
+$publicUrlBox.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $publicUrlBox.Text = $existingPublicBaseUrl
 $setupGroup.Controls.Add($publicUrlBox)
 
@@ -820,6 +847,7 @@ $mcpUrlBox = New-Object Windows.Forms.TextBox
 $mcpUrlBox.Location = New-Object Drawing.Point(190, 150)
 $mcpUrlBox.Size = New-Object Drawing.Size(625, 28)
 $mcpUrlBox.ReadOnly = $true
+$mcpUrlBox.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $setupGroup.Controls.Add($mcpUrlBox)
 
 $passwordLabel = New-Object Windows.Forms.Label
@@ -832,6 +860,7 @@ $passwordBox = New-Object Windows.Forms.TextBox
 $passwordBox.Location = New-Object Drawing.Point(190, 188)
 $passwordBox.Size = New-Object Drawing.Size(490, 28)
 $passwordBox.ReadOnly = $false
+$passwordBox.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $passwordBox.Text = if ($existingAuth.ownerToken) { $existingAuth.ownerToken } else { "" }
 $setupGroup.Controls.Add($passwordBox)
 
@@ -839,6 +868,7 @@ $generatePasswordButton = New-Object Windows.Forms.Button
 $generatePasswordButton.Text = "Generate"
 $generatePasswordButton.Location = New-Object Drawing.Point(695, 187)
 $generatePasswordButton.Size = New-Object Drawing.Size(120, 30)
+$generatePasswordButton.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
 $generatePasswordButton.Add_Click({
   $passwordBox.Text = New-OwnerToken
   Append-Status "Generated new Owner password. Click Save setup to apply it."
@@ -849,6 +879,7 @@ $workflowGroup = New-Object Windows.Forms.GroupBox
 $workflowGroup.Text = "Workflow"
 $workflowGroup.Location = New-Object Drawing.Point(22, 322)
 $workflowGroup.Size = New-Object Drawing.Size(838, 120)
+$workflowGroup.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($workflowGroup)
 
 $saveButton = New-Object Windows.Forms.Button
@@ -923,6 +954,7 @@ $outputGroup = New-Object Windows.Forms.GroupBox
 $outputGroup.Text = "ChatGPT values"
 $outputGroup.Location = New-Object Drawing.Point(22, 452)
 $outputGroup.Size = New-Object Drawing.Size(838, 76)
+$outputGroup.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($outputGroup)
 
 $copyUrlButton = New-Object Windows.Forms.Button
@@ -951,6 +983,7 @@ $outputHint = New-Object Windows.Forms.Label
 $outputHint.Text = "Use the MCP URL as the ChatGPT server URL. Use the Owner password when approving access."
 $outputHint.Location = New-Object Drawing.Point(394, 34)
 $outputHint.Size = New-Object Drawing.Size(420, 24)
+$outputHint.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $outputHint.ForeColor = [Drawing.Color]::DimGray
 $outputGroup.Controls.Add($outputHint)
 
@@ -958,6 +991,7 @@ $toolsGroup = New-Object Windows.Forms.GroupBox
 $toolsGroup.Text = "Files and logs"
 $toolsGroup.Location = New-Object Drawing.Point(22, 538)
 $toolsGroup.Size = New-Object Drawing.Size(838, 76)
+$toolsGroup.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($toolsGroup)
 
 $openConfigButton = New-Object Windows.Forms.Button
@@ -1002,6 +1036,7 @@ $statusBox.Multiline = $true
 $statusBox.ReadOnly = $true
 $statusBox.ScrollBars = "Vertical"
 $statusBox.Font = New-Object Drawing.Font("Consolas", 9)
+$statusBox.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Bottom -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
 $form.Controls.Add($statusBox)
 
 $publicUrlBox.Add_TextChanged({ Refresh-Ui })
@@ -1014,6 +1049,14 @@ $portBox.Add_ValueChanged({
 
 Refresh-Ui
 Append-Status "Ready. Use a public HTTPS tunnel URL for ChatGPT; local URL is fine for local MCP clients."
+
+$form.Add_Shown({
+  $checkInstallButton.Focus() | Out-Null
+  Set-TextStart $allowedRootBox
+  Set-TextStart $publicUrlBox
+  Set-TextStart $mcpUrlBox
+  Set-TextStart $passwordBox
+})
 
 $form.Add_FormClosing({
   if (Test-DevSpaceRunning) {
